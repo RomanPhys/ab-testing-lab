@@ -1,0 +1,7 @@
+# большое и воспроизводимое: база пересобирается запуском ноутбука
+data/*.sqlite
+data/marts/mart_users.csv
+
+__pycache__/
+.ipynb_checkpoints/
+.venv/

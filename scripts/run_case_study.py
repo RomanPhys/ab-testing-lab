@@ -1,6 +1,6 @@
 """
-One experiment end-to-end, as an analyst would do it:
-  warehouse (SQLite) -> SQL -> SRM check -> metrics with CI -> CUPED -> segments -> decision.
+One experiment from start to finish: SQLite warehouse, SQL, SRM check, metrics with CI, CUPED,
+segments and the decision.
 
     python scripts/run_case_study.py
 """
@@ -26,7 +26,7 @@ EXPERIMENT, TRUE_UPLIFT = "new_checkout_button", 0.08   # +8 % to P(order | sess
 
 
 def holm(pvals: list[float]) -> list[float]:
-    """Holm-Bonferroni adjusted p-values (controls FWER for the segment breakdown)."""
+    """Holm-Bonferroni adjusted p-values, controls FWER across segments."""
     m, order = len(pvals), np.argsort(pvals)
     adj, running = np.empty(m), 0.0
     for rank, i in enumerate(order):
@@ -56,7 +56,7 @@ def main() -> None:
     p_srm = S.srm_test(int(n_c), int(n_t))
 
     df = run_sql(db, ROOT / "sql" / "user_metrics.sql", experiment=EXPERIMENT)
-    # design BEFORE looking at the outcome: MDE from a historical 14-day window of the same users
+    # design comes before looking at the outcome: MDE on a past 14-day window of the same users
     hist = df.gmv_hist14.values
     mde_rel = S.mde(hist.std(ddof=1), len(df) // 2) / hist.mean()
 
@@ -82,7 +82,7 @@ def main() -> None:
     rows.append({"metric": "Orders per session", "method": "Naive session-level z-test (wrong)", **fmt(r, base_ratio)})
     res = pd.DataFrame(rows)
 
-    # segments: is the effect different on android / ios / web?  Several tests -> correct p-values
+    # segments: does the effect differ between android, ios and web? several tests, so Holm correction
     seg = []
     for plat, g in df.groupby("platform"):
         gc, gt = g[g.variant == "control"], g[g.variant == "treatment"]

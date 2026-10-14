@@ -1,6 +1,6 @@
 """
 Builds an event-level SQLite warehouse (users, assignments, sessions, orders) from the generative
-model, so that the analysis goes through SQL the same way it would on a real platform.
+model, so the analysis goes through SQL like it would on a real platform.
 """
 from __future__ import annotations
 
@@ -26,7 +26,7 @@ CREATE INDEX ix_orders_user   ON orders(user_id);
 
 def build_warehouse(path: str | Path, pop: Population, experiment: str, pre_days: int,
                     exp_days: int, uplift: float, rng: np.random.Generator) -> np.ndarray:
-    """Writes the database and returns the treatment indicator (for checks only)."""
+    """Writes the database and returns the treatment flags (used only in checks)."""
     path = Path(path)
     path.unlink(missing_ok=True)
     user_ids = np.arange(pop.n)
@@ -37,7 +37,7 @@ def build_warehouse(path: str | Path, pop: Population, experiment: str, pre_days
     s_user = np.repeat(user_ids, n_sess)
     s_day = rng.integers(-pre_days, exp_days, size=s_user.size)
 
-    # orders: Bernoulli per session; the treatment acts only during the experiment
+    # orders: Bernoulli per session, the treatment works only during the experiment
     p = pop.p[s_user] * (1.0 + uplift * (treated[s_user] == 1) * (s_day >= 0))
     has_order = rng.random(s_user.size) < np.clip(p, 0, 1)
     o_sess = np.flatnonzero(has_order)

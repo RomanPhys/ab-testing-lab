@@ -1,12 +1,11 @@
 """
-Monte Carlo validation of the statistical methods - the part that turns "I know formulas"
-into "I checked the formulas on data with a known ground truth".
+Monte Carlo check of the statistical methods on data where the true effect is known.
 
-  A/A runs (no effect): the share of p < 0.05 must be ~5 %, p-values must be Uniform(0, 1).
-  A/B runs (known effect): share of p < 0.05 = power.
+  A/A runs (no effect): share of p < 0.05 should be about 5 %, p-values should be Uniform(0, 1).
+  A/B runs (known effect): share of p < 0.05 is the power.
 
-    python scripts/run_validation.py            # ~1-2 min
-    python scripts/run_validation.py --runs 300 # quick check
+    python scripts/run_validation.py            # ~2.5 min
+    python scripts/run_validation.py --runs 200 # quick run
 """
 from __future__ import annotations
 
@@ -73,7 +72,7 @@ def main() -> None:
         "FPR (A/A), %": [100 * (aa[m].dropna() < 0.05).mean() for m in methods],
         f"power (+{100 * UPLIFT:.0f} % conv.), %": [100 * (ab[m].dropna() < 0.05).mean() for m in methods],
     })
-    # 95 % binomial band for FPR = 5 %: anything outside is a real miscalibration, not noise
+    # 95 % binomial band around FPR = 5 %, outside of it the test is miscalibrated
     half = 1.96 * np.sqrt(0.05 * 0.95 / args.runs) * 100
     rho2, r2 = aa["_rho2"].mean(), aa["_r2"].mean()
 
@@ -92,7 +91,7 @@ def main() -> None:
     (ROOT / "results" / "validation.md").write_text("\n".join(lines), encoding="utf-8")
     print("\n".join(lines))
 
-    # p-value histograms under H0: uniform = calibrated test
+    # p-value histograms under H0, a calibrated test gives a flat histogram
     fig, axes = plt.subplots(1, 2, figsize=(10, 3.8), sharey=True)
     for ax, m in zip(axes, ["ratio: naive session-level", "ratio: delta method"]):
         ax.hist(aa[m], bins=20, range=(0, 1), color="tab:red" if "naive" in m else "tab:green", alpha=.8)

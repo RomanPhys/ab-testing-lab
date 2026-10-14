@@ -1,8 +1,8 @@
 """
 Generative model of a marketplace population.
 
-Each user u has latent traits that persist over time (this is what makes pre-period data
-useful for variance reduction):
+Each user u has hidden traits that stay the same over time. That is why pre-period data
+helps with variance reduction.
     lambda_u ~ Gamma            sessions per day          (activity, heavy right tail)
     p_u      ~ Beta             P(order | session)        (propensity to buy)
     m_u      ~ Normal           log of typical order value
@@ -12,8 +12,8 @@ Observed in a period of D days:
     orders_u   ~ Binomial(sessions_u, p_u * (1 + uplift * treated_u))
     gmv_u      = sum of orders_u draws from LogNormal(m_u, VALUE_SIGMA)
 
-Heterogeneity across users is the key: sessions of one user are NOT independent trials,
-because they share the same p_u. Any test that treats sessions as i.i.d. underestimates variance.
+Users differ a lot, and this matters. Sessions of one user share the same p_u, so they are not
+independent trials, and a test that treats sessions as i.i.d. underestimates the variance.
 """
 from __future__ import annotations
 
@@ -57,7 +57,7 @@ class PeriodOutcome:
 
 def simulate_period(pop: Population, days: int, rng: np.random.Generator,
                     treated: np.ndarray | None = None, uplift: float = 0.0) -> PeriodOutcome:
-    """User-level aggregates for one period. Exact sampling, vectorised (no per-user loop)."""
+    """Per-user totals for one period. Exact sampling, vectorised without a loop over users."""
     p = pop.p if treated is None else pop.p * (1.0 + uplift * treated)
     sessions = rng.poisson(pop.lam * days)
     orders = rng.binomial(sessions, np.clip(p, 0, 1))
@@ -69,8 +69,8 @@ def simulate_period(pop: Population, days: int, rng: np.random.Generator,
 
 def hash_split(user_ids: np.ndarray, salt: str, share: float = 0.5) -> np.ndarray:
     """
-    Deterministic assignment as on real experiment platforms: variant = hash(salt + id) mod 1000.
-    Same user always lands in the same group of an experiment; different salts are independent.
+    Deterministic split like on real experiment platforms, bucket = hash(salt + id) mod 1000.
+    A user always gets the same group within one experiment, different salts give independent splits.
     """
     import hashlib
     buckets = np.fromiter(

@@ -1,4 +1,4 @@
-"""Fast checks of the statistical machinery.  Run: pytest -q"""
+"""Quick tests for the stats code. Run with pytest -q"""
 import sys
 from pathlib import Path
 
